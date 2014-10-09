@@ -10,12 +10,28 @@ class Observer(object):
     """
 
     # define functions that will be used for all observer instances.
-    fit_p_func = fit_p_func
 
     def __init__(self):
         self.samples = []
         self.stim_i = []
         self.model = None
+
+    def fit_p_func(self, p_func, bounds=[None, None, None, None],
+               search_grid_size=50, **kwargs):
+        """
+        Makes class method from static method of fit_p_func.
+
+        :param p_func:
+        :param bounds:
+        :param search_grid_size:
+        :return None
+        """
+
+        data = self.samples
+        stim = self.stim_i
+        self.model = fit_p_func(data, stim, p_func, bounds=bounds,
+                         search_grid_size=search_grid_size, **kwargs)
+        return
 
 
 class SimObserver(Observer):
