@@ -12,10 +12,13 @@ def fit_p_func(data, stim, p_func, bounds=[None, None, None, None],
                search_grid_size=50, initial_conditions=None):
     """
 
-    :param observer: an Observer object with a samples attribute.
-    :param p_func: psychometric function object. SHOULD EXPECT 5 VARIABLES (i, alpha, beta, guess, lapse).
-    :param constraints: list or tuple of constraints for parameters order -> [alpha, beta, guess, lapse]. If constraint
-    is numeric, the parameter will be treated as set (not free), elseif the constraint is a 2 member tuple,the function
+    :param data: 2xn array of [number correct, number trials]. Each row of the array are trials for a single stimulus
+    parameter.
+    :param stim: 1xn array of stimulus parameter (ie stimulus intensity) corresponding to the data array.
+    :param p_func: psychometric function object or string indicating the .
+    FUNCTION SHOULD EXPECT 5 VARIABLES (i, alpha, beta, guess, lapse).
+    :param bounds: list or tuple of constraints for parameters order -> [alpha, beta, guess, lapse]. If constraint
+    is scalar, the parameter will be treated as set (not free), elseif the constraint is a 2 member tuple,the function
     will constrain the parameter within the bounds specified (low, high). If None, the parameter is COMPLETELY un-
     constrained.
     :return: PsycometricModel object.

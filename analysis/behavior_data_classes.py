@@ -43,15 +43,24 @@ class BehaviorRun(object):
         events = {}
         streams = {}
         for k, event_node in self.events.iteritems():
-            ev = event_node.read()
-            ev_l = (ev > start_time) * (ev < end_time)
-            if np.any(ev_l):
-                ev_i = np.where(ev_l)  # returns 2 d array. 1st row is row number, 2nd is column number.
-                ev_i_l = np.min(ev_i[0])  # using first column, which corresponds to the row (each row is an event).
-                ev_i_h = np.max(ev_i[0])
-                events[k] = ev[ev_i_l:ev_i_h]
-            else:  # Handles the case where ev_l is an empty array, in which case the min and max functions explode.
-                events[k] = np.array([], dtype=ev.dtype)
+            try:
+                ev = event_node.read()
+            except AttributeError:
+                ev = event_node
+            ev_l = (ev >= start_time) * (ev <= end_time)
+            if ev.ndim == 2:  # for lick handling, we need to worry about both the on and off columns:
+                if np.any(ev_l):
+                    ev_i = np.where(ev_l)  # returns 2 d array. 1st row is row number, 2nd is column number.
+                    ev_i_l = np.min(ev_i[0])  # using first column, which corresponds to the row (each row is an event).
+                    ev_i_h = np.max(ev_i[0])
+                    events[k] = ev[ev_i_l:ev_i_h]
+                else:  # Handles the case where ev_l is an empty array, in which case the min and max functions explode.
+                    events[k] = np.array([], dtype=ev.dtype)
+            else:
+                if np.any(ev_l):
+                    events[k] = ev[ev_l]
+                else:
+                    events[k] = np.array([],dtype=ev.dtype)
         for k, stream_node in self.streams.iteritems():
             if read_streams:
                 streams[k] = stream_node[start_time:end_time]  # reads these values from the stream node into memory.
@@ -64,7 +73,7 @@ class BehaviorRun(object):
         ends = self.trials['endtrial']
         idx = (starts <= end_time) * (starts >= start_time) * (ends <= end_time) * (ends >= start_time)  # a bit redundant.
         trials = self.trials[idx]  # produces a tables.Table
-        return BehaviorEpoch(trials, events, streams, self)
+        return BehaviorEpoch(start_time, end_time, trials, events, streams, self)
 
     def return_trial(self, trial_index, padding=(2000, 2000)):
         """
@@ -80,6 +89,8 @@ class BehaviorRun(object):
         end = trial['endtrial']  # don't really care here whether this is higher than the record: np will return only as much as it has.
         if not start or not end:
             return None
+        if np.isscalar(padding):
+            padding = [padding, padding]
         if start >= padding[0]:  # don't want the start time to be before 0
             start -= padding[0]
         end += padding[1]
@@ -97,9 +108,12 @@ class BehaviorRun(object):
         if self._h5.isopen:
             self._h5.close()
 
+    def __str__(self):
+        return 'BehaviorRun:  Mouse: %i, Session: %i.' % (self.mouse, self.session)
+
 
 class BehaviorEpoch(object):
-    def __init__(self,  trials=np.ndarray([]), events={}, streams={}, parent=None, **kwargs):
+    def __init__(self, start_time, end_time, trials=np.ndarray([]), events={}, streams={}, parent=None, **kwargs):
         """
         Container for arbitrary epochs of behavior data. Inherits metadata from the parent.
 
@@ -118,6 +132,8 @@ class BehaviorEpoch(object):
         self.events = events
         self.streams = streams
         self.parent_epoch = parent
+        self.start_time = start_time
+        self.end_time = end_time
         if parent:
             self._process_parent(parent)
         return
@@ -157,6 +173,3 @@ class BehaviorTrial(BehaviorEpoch):
                 pass
         else:
             raise ValueError
-
-
-

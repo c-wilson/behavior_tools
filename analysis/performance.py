@@ -48,6 +48,7 @@ def calc_mask_performace(behavior_epoch):
     behavior_epoch.mask_concs = mask_concs
 
     mask_performance = {}
+    umask_performance = {}
     for conc in mask_concs:
         c_dict = {}
         conc_mask = odor_conc == conc
@@ -58,7 +59,12 @@ def calc_mask_performace(behavior_epoch):
             n_trials = np.sum(t_mask)
             c_dict[lat] = (percent_correct, n_trials)
         mask_performance[conc] = c_dict
+        # Calculate unmasked trial performance:
+        ut_mask = np.invert(mask_trials) * conc_mask * behavior_epoch.valid_trial_array
+        umask_performance[conc] = (np.sum(ut_mask * behavior_epoch.correct_trial_array),
+                                   np.sum(ut_mask))
     behavior_epoch.mask_performace = mask_performance
+    behavior_epoch.unmask_performance = umask_performance
     return
 
 

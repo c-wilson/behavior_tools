@@ -20,10 +20,26 @@ def get_session_fn(mouse, session, base_directory='~/Data/Behavior/'):
             file_sizes.append(os.path.getsize(ffn))
         id = file_sizes.index(max(file_sizes))
         session_path = os.path.join(mousepath, file_list[id])
+    elif len(file_list) < 1:
+        return None
     else:
         session_path = os.path.join(mousepath, file_list[0])
 
     return session_path
+
+
+def get_session_fns(mouse, sessions = [], base_directory='~/Data/Behavior/'):
+    mousedirname = 'mouse_%04i' % mouse
+    mousepath = os.path.join(base_directory, mousedirname, 'h5_new')
+    fns = []
+    for session in sessions:
+        fn = get_session_fn(mouse, session, base_directory)
+        if fn:
+            fns.append(fn)
+    return fns
+
+
+
 
 
 def parse_h5path(path):
