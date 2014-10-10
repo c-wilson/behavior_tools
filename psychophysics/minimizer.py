@@ -184,7 +184,8 @@ def bootstrap_analysis(observer, n_samples = 20000):
                'variances': variances,
                'sd':standard_deviations,
                'CI_95': confidences}
-    return results
+    observer.bootstrap = results
+    return observer
 
 
 def _draw_and_fit(_iter, observer):

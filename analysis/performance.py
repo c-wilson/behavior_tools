@@ -2,8 +2,6 @@ __author__ = 'chris'
 
 import behavior_data_classes
 import numpy as np
-from scipy import stats
-
 
 
 def calc_performace(behavior_epoch):
@@ -19,13 +17,14 @@ def calc_performace(behavior_epoch):
     correct_array = a * b
     c = results < 5
     valid_trial_array = a * c
-    behavior_epoch.percent_correct = np.float(np.sum(correct_array)) / np.float(np.sum(valid_trial_array))
+    percent_correct = np.float(np.sum(correct_array)) / np.float(np.sum(valid_trial_array))
+    behavior_epoch.percent_correct = percent_correct
     behavior_epoch.correct_trial_array = correct_array
     behavior_epoch.valid_trial_array = valid_trial_array
-    return
+    return percent_correct
 
 
-def calc_mask_performace(behavior_epoch):
+def calc_mask_performance(behavior_epoch):
     """
     Adds a mask_performance attribute to the BehaviorEpoch object input.
     Format of mask_performace dictionary is : {concentration: {mask_latency: (num_correct, num_trials)}}

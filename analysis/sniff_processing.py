@@ -3,7 +3,8 @@ __author__ = 'chris'
 import behavior_data_classes
 import numpy as np
 
-def sniff_thresholding(sniff, threshold=-20, **kwargs):
+
+def _sniff_thresholding(sniff, threshold=-20, **kwargs):
     """
     Rudamentary sniff analysis. Compares sniff from behavior epoch with threshold.
     Assumes that sniff is NOT inverted from ADC (inhale is negative!)!!!!
@@ -12,7 +13,7 @@ def sniff_thresholding(sniff, threshold=-20, **kwargs):
     :return:
     """
 
-    if np.max(sniff) < 150 or np.min(sniff) > -150:
+    if np.max(sniff) < 200 or np.min(sniff) > -200:
         return np.array([]), np.array([])
     else:
         sniff_logical = sniff < threshold
@@ -24,5 +25,5 @@ def sniff_thresholding(sniff, threshold=-20, **kwargs):
 
 def make_sniff_events(behavior_epoch, **kwargs):
     sniff = behavior_epoch.streams['sniff'].read()
-    (behavior_epoch.events['sniff_inh'], behavior_epoch.events['sniff_exh']) = sniff_thresholding(sniff, **kwargs)
+    (behavior_epoch.events['sniff_inh'], behavior_epoch.events['sniff_exh']) = _sniff_thresholding(sniff, **kwargs)
 

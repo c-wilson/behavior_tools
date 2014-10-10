@@ -11,9 +11,9 @@ class Observer(object):
 
     # define functions that will be used for all observer instances.
 
-    def __init__(self):
-        self.samples = []
-        self.stim_i = []
+    def __init__(self, stimuli=[], samples=[]):
+        self.samples = stimuli
+        self.stim_i = samples
         self.model = None
 
     def fit_p_func(self, p_func, bounds=[None, None, None, None],
@@ -31,7 +31,7 @@ class Observer(object):
         stim = self.stim_i
         self.model = fit_p_func(data, stim, p_func, bounds=bounds,
                          search_grid_size=search_grid_size, **kwargs)
-        return
+        return self
 
 
 class SimObserver(Observer):
