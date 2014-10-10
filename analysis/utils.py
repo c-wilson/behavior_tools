@@ -1,10 +1,53 @@
 __author__ = 'chris'
 
 import datetime, os
+import numpy as np
 
 
+def get_session_fns(mouse, sessions=[], base_directory='~/Data/Behavior/'):
+    """
+    Returns a list of filenames corresponding to the session files for a mouse.
+    Currently this will look for files within an 'h5_new' folder within the mouse folder.
 
-def get_session_fn(mouse, session, base_directory='~/Data/Behavior/'):
+    :param mouse: Int animal id number
+    :param sessions: List of session numbers. If empty, will return ALL sessions for given mouse.
+    :param base_directory: directory where the Data structure lives.
+    :type mouse: int
+    :type sessions: list
+    :type base_directory: str
+    :return: list of filenames corresponding to session h5 files.
+    :rtype: list
+    """
+    mousedirname = 'mouse_%04i' % mouse
+    mousepath = os.path.join(base_directory, mousedirname, 'h5_new')
+    fns = []
+
+    if np.isscalar(sessions):
+        sessions = [sessions]
+    # if you leave sessions as an empty array, go through directory and find EVERY session number.
+    elif len(sessions) == 0:
+        d = os.listdir(mousepath)
+        for fn in d:
+            m, s, d = _parse_h5path(fn)
+            if s:
+                sessions.append(s)
+    # Once session list is built go through the session numbers and return the filenames that occur with them.
+    for session in sessions:
+        fn = _get_session_fn(mouse, session, base_directory)
+        if fn:
+            fns.append(fn)
+    return fns
+
+
+def _get_session_fn(mouse, session, base_directory='~/Data/Behavior/'):
+    """
+    Helper function to get filename based on mouse number and session number.
+
+    :param mouse: int mouse number
+    :param session: int session number
+    :param base_directory:
+    :return:
+    """
     mousedirname = 'mouse_%04i' % mouse
     mousepath = os.path.join(base_directory, mousedirname, 'h5_new')
     session_name_seed = 'mouse%i_sess%i' % (mouse, session)
@@ -18,32 +61,23 @@ def get_session_fn(mouse, session, base_directory='~/Data/Behavior/'):
         for fn in file_list:
             ffn = os.path.join(mousepath,fn)
             file_sizes.append(os.path.getsize(ffn))
-        id = file_sizes.index(max(file_sizes))
-        session_path = os.path.join(mousepath, file_list[id])
+        ind = file_sizes.index(max(file_sizes))
+        session_path = os.path.join(mousepath, file_list[ind])
     elif len(file_list) < 1:
         return None
     else:
         session_path = os.path.join(mousepath, file_list[0])
-
     return session_path
 
 
-def get_session_fns(mouse, sessions = [], base_directory='~/Data/Behavior/'):
-    mousedirname = 'mouse_%04i' % mouse
-    mousepath = os.path.join(base_directory, mousedirname, 'h5_new')
-    fns = []
-    for session in sessions:
-        fn = get_session_fn(mouse, session, base_directory)
-        if fn:
-            fns.append(fn)
-    return fns
+def _parse_h5path(path):
+    """
 
-
-
-
-
-def parse_h5path(path):
-    fn = os.path.split(path)[1]
+    :param path: string to filename
+    :return: tuple of ints: (mouse, session, date),
+    :type path: str
+    """
+    fn = os.path.split(path)[1]  # this returns the filename out of the entire path, even if only filename is provided.
     if fn.find('mouse') > -1:  # CAN CHANGE THE FORMATTING HERE!
         mouse_start = fn.find('mouse') + len('mouse')
     else:
