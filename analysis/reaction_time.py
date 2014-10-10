@@ -153,4 +153,58 @@ def rxn_make_observer(behavior_epochs):
     return obs
 
 
+def rxn_concentration_make_observers(behavior_epochs):
+    concentrations = []
+    conc = np.array([])
+    for b in behavior_epochs:
+        conc = np.concatenate((conc, b.trials['odorconc']))
+    conc = np.unique(conc)
+
+    observers = []
+
+    for con in conc:
+        c_correct = np.array([], dtype=np.bool)
+        c_rxn = np.array([],dtype=np.float64)
+        for epoch in behavior_epochs:
+            if not hasattr(epoch, 'reaction_times'):
+                rxn_time_epoch(epoch)
+            rxn = epoch.reaction_times
+            result = epoch.trials['result']
+            concentrations = epoch.trials['odorconc']
+            valid = (result <5) * (result > 0) * (concentrations == con)
+            correct = result < 3
+            rxn = rxn[valid]
+            correct = correct[valid]
+            c_rxn = np.concatenate([c_rxn, rxn])
+            c_correct = np.concatenate([c_correct, correct])
+        # combine, sort by rxn time, and break back into two arrays.
+        c = np.hstack((c_rxn[:,np.newaxis],
+                              c_correct[:,np.newaxis]))
+        c = c[c[:,0].argsort()]
+        rx = c[:,0]
+        cor = c[:,1]
+        # remove nans from this stuff:
+        not_nans = ~np.isnan(rx)
+        not_nans = ~np.isnan(cor) * not_nans
+        rx = rx[not_nans]
+        cor = cor[not_nans]
+        # Collapse duplicate observations:
+        u_r = np.unique(rx)
+        rx2 = np.zeros(u_r.size)
+        res = np.zeros((u_r.size,2))
+        for i, r in enumerate(u_r):
+            idx = rx==r
+            n_obs = np.sum(idx)
+            n_cor = np.sum(cor[idx])
+            res[i,:] = n_cor, n_obs
+            rx2[i] = r
+        obs = psychophysics.Observer(res, rx2)
+        obs.concentration = con
+        observers.append(obs)
+    return observers
+
+
+
+
+
 

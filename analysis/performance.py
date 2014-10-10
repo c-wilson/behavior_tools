@@ -4,7 +4,7 @@ import behavior_data_classes
 import numpy as np
 
 
-def calc_performace(behavior_epoch):
+def calc_performance(behavior_epoch):
     """
 
     :param behavior_epoch:
@@ -32,7 +32,7 @@ def calc_mask_performance(behavior_epoch):
     :param behavior_epoch:
     :return:
     """
-    calc_performace(behavior_epoch)
+    calc_performance(behavior_epoch)
     if 'amplitude_1' in behavior_epoch.trials.dtype.names:
         mask_trials = behavior_epoch.trials['amplitude_1'] > 0
     else:
