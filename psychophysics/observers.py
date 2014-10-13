@@ -1,6 +1,7 @@
 from minimizer import fit_p_func
 from psycho_fns import p_funcs
 import numpy as np
+import matplotlib.pyplot as plt
 
 
 
@@ -31,7 +32,29 @@ class Observer(object):
         stim = self.stim_i
         self.model = fit_p_func(data, stim, p_func, bounds=bounds,
                          search_grid_size=search_grid_size, **kwargs)
-        return self
+        return self  # allows use with multiprocessing schemes.
+
+    def plot_bins(self, binsize=50, *args, **kwargs):
+        nt = np.sum(self.samples[:,1])
+        nbins = int(nt) / int(binsize)
+        results = np.zeros((nbins, 2))
+        count = 0
+        n_c = 0
+        i = 0
+        for rx, res in zip(self.stim_i, self.samples):
+            count += res[1]
+            n_c += res[0]
+            if count >= binsize:
+                results[i, 0] = rx
+                results[i, 1] = float(n_c) / float(count)
+                count = 0
+                n_c = 0
+                i += 1
+        results = results[:i, :]
+        plt.plot(results[:, 0], results[:, 1], *args, **kwargs)
+
+
+
 
 
 class SimObserver(Observer):
