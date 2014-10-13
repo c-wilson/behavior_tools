@@ -8,7 +8,7 @@ from psycho_fns import p_funcs
 from multiprocessing import Pool
 from functools import partial
 
-def fit_p_func(data, stim, p_func, bounds=[None, None, None, None],
+def fit_p_func(data, stim, p_func, bounds=(None, None, None, None),
                search_grid_size=50, initial_conditions=None):
     """
 
@@ -67,6 +67,7 @@ def fit_p_func(data, stim, p_func, bounds=[None, None, None, None],
             reparam_fn, inv_reparam_fn = func_g(h,l)
             reparam_fns.append(reparam_fn)
             guess_space.append(np.nan_to_num(inv_reparam_fn(np.linspace(h,l, num=search_grid_size))))
+            # print guess_space
         else:
             print 'alpha value is not scalar or of length 2, so this cannot be preformed.'
             #TODO: raise exemption
@@ -108,14 +109,21 @@ def fit_p_func(data, stim, p_func, bounds=[None, None, None, None],
 
         guess_idxes = np.where(nll_mat == np.min(nll_mat))
 
+        # #### DEBUG ######
+        # import matplotlib.pyplot as plt
+        # import matplotlib
+        # plt.pcolormesh(guess_space[0] ,guess_space[1], np.clip(-np.nan_to_num(nll_mat[:,:,0,0]),0 ,5e4, ),
+        #                norm=matplotlib.colors.LogNorm())
+        # #### DEBUG ######
+
         for g_ax, idx, rp_fn in zip(guess_space, guess_idxes, reparam_fns):
             x0.append(g_ax[idx][0])
     else:
         x0 = initial_conditions
+    # print x0
 
     # ----- MINIMIZE OBJECTIVE FUNCTION -----
     res = minimize(nll, x0, method='Nelder-Mead', options={'maxiter':int(1e9), 'maxfev':int(1e4)})
-
     return PsychometricModel(p_func,
                              alpha=reparam_fns[0](res.x[0]),
                              beta=reparam_fns[1](res.x[1]),
@@ -135,11 +143,7 @@ def bootstrap_analysis(observer, n_samples = 20000):
     :type observer: observers.Observer
     """
 
-
     #parse this into a tuple for the _draw_and_fit function below:
-
-
-    # use multiprocessing.
     if not hasattr(observer, 'model'):
         print 'Observer object must have compute model prior to bootstrapping.'
         return
@@ -242,5 +246,9 @@ class PsychometricModel(object):
         for idx, stim in enumerate(i):
             ret[idx] = p_func(stim, self.alpha, self.beta, self.guess, self.lapse)
         return ret
+
+    def __str__(self):
+        return ("Psycometric model fit to %s function. \nParameters: alpha: %.4f, beta: %.4f, gamma: %.4f, lambda: %.4f"
+                % (self.p_func, self.alpha, self.beta, self.guess, self.lapse))
 
 

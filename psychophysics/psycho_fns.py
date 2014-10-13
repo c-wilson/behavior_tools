@@ -12,7 +12,7 @@ def weibull(i, alpha, beta, guess, lapse):
     :param lapse:
     :return:
     """
-    return ((1.-lapse)-(1.-guess)*
+    return ((1.-lapse)-(1.-guess-lapse) *
             np.exp(-(i/alpha)**beta))
 
 def logistic(i, alpha, beta, guess, lapse):
