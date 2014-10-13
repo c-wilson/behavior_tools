@@ -40,6 +40,9 @@ class BehaviorRun(object):
         :type end_time: int
         :return:
         """
+        if not self._h5.isopen:
+            print 'WARNING, HDF5 object for behavior session is closed.\nPlease reopen using the open() method.'
+
         events = {}
         streams = {}
         for k, event_node in self.events.iteritems():
@@ -103,6 +106,14 @@ class BehaviorRun(object):
         """
         if self._h5.isopen:
             self._h5.close()
+
+    def open(self):
+        """
+        Opens HDF5 object underlying the behavior session.
+        :return:
+        """
+        if not self._h5.isopen:
+            self._h5 = tables.open_file(self.file_path)
 
     def __str__(self):
         return 'BehaviorRun:  Mouse: %i, Session: %i.' % (self.mouse, self.session)
