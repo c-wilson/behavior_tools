@@ -4,22 +4,21 @@ import datetime, os
 import numpy as np
 
 
-def get_session_fns(mouse, sessions=[], base_directory='~/Data/Behavior/'):
+def get_session_fns(mouse, sessions, base_directory='/Users/chris/Data/Behavior/'):
     """
     Returns a list of filenames corresponding to the session files for a mouse.
-    Currently this will look for files within an 'h5_new' folder within the mouse folder.
 
     :param mouse: Int animal id number
     :param sessions: List of session numbers. If empty, will return ALL sessions for given mouse.
     :param base_directory: directory where the Data structure lives.
     :type mouse: int
-    :type sessions: list
+    :type sessions: tuple
     :type base_directory: str
     :return: list of filenames corresponding to session h5 files.
     :rtype: list
     """
     mousedirname = 'mouse_%04i' % mouse
-    mousepath = os.path.join(base_directory, mousedirname, 'h5_new')
+    mousepath = os.path.join(base_directory, mousedirname)
     fns = []
 
     if np.isscalar(sessions):
@@ -49,7 +48,7 @@ def _get_session_fn(mouse, session, base_directory='~/Data/Behavior/'):
     :return:
     """
     mousedirname = 'mouse_%04i' % mouse
-    mousepath = os.path.join(base_directory, mousedirname, 'h5_new')
+    mousepath = os.path.join(base_directory, mousedirname)
     session_name_seed = 'mouse%i_sess%i' % (mouse, session)
     d = os.listdir(mousepath)
     file_list = []
