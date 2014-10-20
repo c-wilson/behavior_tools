@@ -1,13 +1,17 @@
 __author__ = 'chris'
 
 import inspect
+from multiprocessing import Pool
+import numpy as np
+import numpy as np
 
-class a(object):
-    u = 332
-    def __init__(self):
-        print inspect.getfile(self.__class__)
-        return
+def a_func(x):
+    u = x
+    def _another_func():
+        print u
+    _another_func()
+    return
 
 if __name__ == '__main__':
-    u = a()
-    print inspect.getfile(u.__class__)
+
+    a_func(3)

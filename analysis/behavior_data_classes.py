@@ -12,7 +12,7 @@ class BehaviorRun(object):
     def __init__(self, file_path):
 
         self.file_path = file_path
-        self.mouse, self.session, self.date_time = utils._parse_h5path(file_path)
+        self.mouse, self.session, self.date_time = utils.parse_h5path(file_path)
         try:
             h5 = tables.open_file(file_path, mode='r')
         except IOError as er:

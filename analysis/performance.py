@@ -24,7 +24,7 @@ def calc_performance(behavior_epoch):
     return percent_correct
 
 
-def calc_mask_performance(behavior_epoch):
+def calc_mask_performance(behavior_epoch, separate_concentrations=True):
     """
     Adds a mask_performance attribute to the BehaviorEpoch object input.
     Format of mask_performace dictionary is : {concentration: {mask_latency: (num_correct, num_trials)}}
@@ -48,9 +48,21 @@ def calc_mask_performance(behavior_epoch):
 
     mask_performance = {}
     umask_performance = {}
+
+    if not separate_concentrations:
+        mask_concs_true = mask_concs
+        mask_concs = [None]
+
     for conc in mask_concs:
+        print mask_concs
         c_dict = {}
-        conc_mask = odor_conc == conc
+        if separate_concentrations:
+            conc_mask = odor_conc == conc
+        else:
+            conc_mask = np.zeros(odor_conc.shape, dtype=np.bool)
+            for conc_2 in mask_concs_true:
+                conc_mask = conc_mask + (odor_conc == conc_2)
+                print sum(conc_mask)
         for lat in mask_latencies_unique:
             lat_mask = mask_latencies == lat
             t_mask = mask_trials * conc_mask * lat_mask * behavior_epoch.valid_trial_array
@@ -65,5 +77,3 @@ def calc_mask_performance(behavior_epoch):
     behavior_epoch.mask_performace = mask_performance
     behavior_epoch.unmask_performance = umask_performance
     return
-
-

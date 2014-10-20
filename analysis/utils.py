@@ -28,7 +28,7 @@ def get_session_fns(mouse, sessions=[], base_directory='~/Data/Behavior/'):
     elif len(sessions) == 0:
         d = os.listdir(mousepath)
         for fn in d:
-            m, s, d = _parse_h5path(fn)
+            m, s, d = parse_h5path(fn)
             if s:
                 sessions.append(s)
     # Once session list is built go through the session numbers and return the filenames that occur with them.
@@ -70,7 +70,7 @@ def _get_session_fn(mouse, session, base_directory='~/Data/Behavior/'):
     return session_path
 
 
-def _parse_h5path(path):
+def parse_h5path(path):
     """
 
     :param path: string to filename

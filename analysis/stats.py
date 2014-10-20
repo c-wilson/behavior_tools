@@ -3,6 +3,7 @@ __author__ = 'chris'
 import numpy as np
 from scipy import stats
 
+
 def clopper_pearson(n_correct, n, conf_interval=0.95):
     """
     Clopper-Pearson exact method of binomial confidence interval calculation.
@@ -21,8 +22,10 @@ def clopper_pearson(n_correct, n, conf_interval=0.95):
                         n - n_correct)
     return lo, hi
 
+
 def jeffreys_interval(n_correct, n, conf_interval=0.95):
     """
+    Jeffreys method of binomial confidence interval calculation.
 
     :param n_correct:
     :param n:

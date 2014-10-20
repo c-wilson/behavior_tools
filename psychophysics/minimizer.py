@@ -134,7 +134,7 @@ def fit_p_func(data, stim, p_func, bounds=(None, None, None, None),
                              minimize_result=res)
 
 
-def bootstrap_analysis(observer, n_samples = 20000):
+def bootstrap_analysis(observer, n_samples=20000):
     """
 
     :param observer:

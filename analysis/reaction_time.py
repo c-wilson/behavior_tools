@@ -32,7 +32,8 @@ def rxn_time_trial(behavior_trial):
     licks = []
     first_licks = []
     licks.append(behavior_trial.events['lick1'])
-    licks.append(behavior_trial.events['lick2'])
+    if 'lick2' in behavior_trial.events.keys():
+        licks.append(behavior_trial.events['lick2'])
 
     for lick in licks:
         l = lick > first_sniff
@@ -176,8 +177,8 @@ def rxn_concentration_make_observers(behavior_epochs, skip_first=20):
             if not hasattr(epoch, 'reaction_times'):
                 rxn_time_epoch(epoch)
             rxn = epoch.reaction_times[skip_first:]
-            result = epoch.trials['result']
-            concentrations = epoch.trials['odorconc']
+            result = trials['result']
+            concentrations = trials['odorconc']
             valid = (result < 5) * (result > 0) * (concentrations == con)
             correct = result < 3
             rxn = rxn[valid]
