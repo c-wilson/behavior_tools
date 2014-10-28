@@ -54,7 +54,7 @@ def calc_mask_performance(behavior_epoch, separate_concentrations=True):
         mask_concs = [None]
 
     for conc in mask_concs:
-        print mask_concs
+        # print mask_concs
         c_dict = {}
         if separate_concentrations:
             conc_mask = odor_conc == conc
@@ -77,3 +77,61 @@ def calc_mask_performance(behavior_epoch, separate_concentrations=True):
     behavior_epoch.mask_performace = mask_performance
     behavior_epoch.unmask_performance = umask_performance
     return
+
+
+def calc_correct_first_lick(behavior_epoch):
+    """
+
+    :param behavior_epoch:
+    :return:
+    :type behavior_epoch: behavior_data_classes.BehaviorEpoch
+    """
+    correct_on_first_lick_list = []
+    first_lick_list = []
+    first_correct_lick_list = []
+
+    for tr_idx in range(len(behavior_epoch.trials)):
+        trial = behavior_epoch.return_trial(tr_idx)
+        if not trial:
+            correct_on_first_lick_list.append(False)
+            first_lick_list.append(0)
+            continue
+        result = trial.trials['result']
+        lick1 = behavior_epoch.events['lick1']
+        lick2 = behavior_epoch.events['lick2']
+
+        if result == 1 or result == 4:
+            #  correct is lick2, incorrect is lick 1
+            if np.any(lick2):
+                first_correct_lick = lick2[0, 0]
+            else:
+                first_correct_lick = np.inf
+            if np.any(lick1):
+                first_incorrect_lick = lick1[0, 0]
+            else:
+                first_incorrect_lick = np.inf
+        elif result == 2 or result == 3:
+
+            if np.any(lick1):
+                first_correct_lick = lick1[0, 0]
+            else:
+                first_correct_lick = np.inf
+            if np.any(lick2):
+                first_incorrect_lick = lick2[0, 0]
+            else:
+                first_incorrect_lick = np.inf
+        else:
+            # result was a 5 or a 0, this is an invalid trial, but we need a placeholder
+            correct_on_first_lick_list.append(False)
+            first_lick_list.append(0)
+            continue
+
+        if first_correct_lick < first_incorrect_lick:
+            correct_on_first_lick_list.append(True)
+            first_lick_list.append(first_correct_lick)
+        else:
+            correct_on_first_lick_list.append(False)
+            first_lick_list.append(first_incorrect_lick)
+
+    behavior_epoch.correct_on_first_lick = np.array(correct_on_first_lick_list)
+    behavior_epoch.first_lick_time = np.array(first_lick_list)
