@@ -4,11 +4,14 @@ import tables
 import utils
 import numpy as np
 
+# TODO: make a translator to read fields from the trials array using attributes (ie epoch.trialtype = epoch.trials['trialtype']
+
 
 class BehaviorRun(object):
     """
 
     """
+
     def __init__(self, file_path):
 
         self.file_path = file_path
@@ -63,7 +66,7 @@ class BehaviorRun(object):
                 if np.any(ev_l):
                     events[k] = ev[ev_l]
                 else:
-                    events[k] = np.array([],dtype=ev.dtype)
+                    events[k] = np.array([], dtype=ev.dtype)
         for k, stream_node in self.streams.iteritems():
             if read_streams:
                 streams[k] = stream_node[start_time:end_time]  # reads these values from the stream node into memory.
@@ -74,9 +77,14 @@ class BehaviorRun(object):
         # assume that all 'Trials' events occur between the 'starttrial' and 'endtrial' times.
         starts = self.trials['starttrial']
         ends = self.trials['endtrial']
-        idx = (starts <= end_time) * (starts >= start_time) * (ends <= end_time) * (ends >= start_time)  # a bit redundant.
+        idx = (starts <= end_time) * (starts >= start_time) * (ends <= end_time) * (
+        ends >= start_time)  # a bit redundant.
         trials = self.trials[idx]  # produces a tables.Table
-        return BehaviorEpoch(start_time, end_time, trials, events, streams, self)
+
+        if trials.size == 1:
+            return BehaviorTrial(start_time, end_time, trials, events, streams, self)
+        else:
+            return BehaviorEpoch(start_time, end_time, trials, events, streams, self)
 
     def return_trial(self, trial_index, padding=(2000, 2000)):
         """
@@ -89,7 +97,8 @@ class BehaviorRun(object):
         """
         trial = self.trials[trial_index]
         start = trial['starttrial']
-        end = trial['endtrial']  # don't really care here whether this is higher than the record: np will return only as much as it has.
+        end = trial[
+            'endtrial']  # don't really care here whether this is higher than the record: np will return only as much as it has.
         if not start or not end:
             return None
         if np.isscalar(padding):
@@ -159,24 +168,13 @@ class BehaviorTrial(BehaviorEpoch):
     """
     Contains behavior epoch data for a single trial.
     """
-    def __init__(self, behavior_epoch):
+
+    def __init__(self, *args, **kwargs):
         """
-
-
-
-        :param behavior_epoch:
-        :type behavior_epoch: BehaviorEpoch
+        BehaviorEpoch that contains a single trial's worth of data.
+        :param args:
         :return:
         """
+        super(BehaviorTrial, self).__init__(*args, **kwargs)
         # just want to check that this is in fact representing a single trial, and not many.
-        if behavior_epoch.trials.size == 1:
-            self.trials = behavior_epoch.trials
-            self.events = behavior_epoch.events
-            self.streams = behavior_epoch.streams
-            try:
-                # do this instead of getting these data from the system.
-                self._process_parent(self, behavior_epoch.parent_epoch)
-            except AttributeError:
-                pass
-        else:
-            raise ValueError
+        assert len(self.trials) == 1, 'Warning: cannot initialize a BehaviorTrial object with more than one trial.'
