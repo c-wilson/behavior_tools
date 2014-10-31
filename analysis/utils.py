@@ -4,7 +4,7 @@ import datetime, os
 import numpy as np
 
 
-def get_session_fns(mouse, sessions, base_directory='/Users/chris/Data/Behavior/'):
+def get_session_fns(mouse, sessions=(), base_directory='/Users/chris/Data/Behavior/'):
     """
     Returns a list of filenames corresponding to the session files for a mouse.
 
@@ -24,7 +24,10 @@ def get_session_fns(mouse, sessions, base_directory='/Users/chris/Data/Behavior/
     if np.isscalar(sessions):
         sessions = [sessions]
     # if you leave sessions as an empty array, go through directory and find EVERY session number.
-    elif len(sessions) == 0:
+    else:
+        sessions = list(sessions)
+
+    if len(sessions) == 0:
         d = os.listdir(mousepath)
         for fn in d:
             m, s, d = parse_h5path(fn)
@@ -58,7 +61,7 @@ def _get_session_fn(mouse, session, base_directory='~/Data/Behavior/'):
     if len(file_list) > 1:
         file_sizes = []
         for fn in file_list:
-            ffn = os.path.join(mousepath,fn)
+            ffn = os.path.join(mousepath, fn)
             file_sizes.append(os.path.getsize(ffn))
         ind = file_sizes.index(max(file_sizes))
         session_path = os.path.join(mousepath, file_list[ind])
@@ -94,8 +97,8 @@ def parse_h5path(path):
     time_str = dt_l[1]
     date_str_l = date_str.split('_')
     time_str_l = time_str.split('_')
-    date_int_l = [ int(x) for x in date_str_l ]
-    time_int_l = [ int(x) for x in time_str_l ]
+    date_int_l = [int(x) for x in date_str_l]
+    time_int_l = [int(x) for x in time_str_l]
     dt_final = date_int_l + time_int_l  # makes a list of integers: [Y, M, D, H, M, S]
     date_obj = datetime.datetime(*dt_final)  # make a datetime object by unpacking this list.
     return int(mouse), int(sess), date_obj

@@ -4,26 +4,35 @@ import behavior_data_classes
 import numpy as np
 
 
-def _sniff_thresholding(sniff, threshold=-20, **kwargs):
+def make_sniff_events(behavior_epoch, inh_threshold=20, inverted=True, min_amplitude=200, **kwargs):
     """
-    Rudamentary sniff analysis. Compares sniff from behavior epoch with threshold.
-    Assumes that sniff is NOT inverted from ADC (inhale is negative!)!!!!
-    :param behavior_epoch:
-    :param threshold:
+
+    :param behavior_epoch: BehaviorEpoch
+    :param inh_threshold: Threshold value for definining inhalation vs exhalation
+    :param inverted: if True (default) inhalation is positive.
+    :param min_amplitude: define minimum amplitude for sniff.
     :return:
     """
 
-    if np.max(sniff) < 200 or np.min(sniff) > -200:
+    sniff = behavior_epoch.streams['sniff'].read()
+
+    if inverted:
+        sniff = -sniff
+
+    # check that minimum amplitude is reached.
+    if np.max(sniff) < min_amplitude or np.min(sniff) > -min_amplitude:
         return np.array([]), np.array([])
     else:
-        sniff_logical = sniff < threshold
-        edges = np.convolve([1,-1], sniff_logical, mode='same')  # returns array of 1s and -1s for logic changes
+        sniff_logical = sniff < inh_threshold
+        edges = np.convolve([1, -1], sniff_logical, mode='same')  # returns array of 1s and -1s for logic changes
         up_edges = np.where(edges == 1)[0]  # returns tuple, must take first member from tuple
         down_edges = np.where(edges == -1)[0]
-        return up_edges, down_edges
 
+    if inverted:
+        behavior_epoch.events['sniff_inh'] = down_edges
+        behavior_epoch.events['sniff_exh'] = up_edges
+    else:
+        behavior_epoch.events['sniff_inh'] = up_edges
+        behavior_epoch.events['sniff_exh'] = down_edges
 
-def make_sniff_events(behavior_epoch, **kwargs):
-    sniff = behavior_epoch.streams['sniff'].read()
-    (behavior_epoch.events['sniff_inh'], behavior_epoch.events['sniff_exh']) = _sniff_thresholding(sniff, **kwargs)
-
+    behavior_epoch.sniff_threshold = inh_threshold

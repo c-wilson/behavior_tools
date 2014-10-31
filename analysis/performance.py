@@ -2,6 +2,8 @@ __author__ = 'chris'
 
 import behavior_data_classes
 import numpy as np
+from numpy.lib import recfunctions
+import sniff_processing
 
 
 def calc_performance(behavior_epoch):
@@ -19,8 +21,19 @@ def calc_performance(behavior_epoch):
     valid_trial_array = a * c
     percent_correct = np.float(np.sum(correct_array)) / np.float(np.sum(valid_trial_array))
     behavior_epoch.percent_correct = percent_correct
-    behavior_epoch.correct_trial_array = correct_array
-    behavior_epoch.valid_trial_array = valid_trial_array
+
+    assert len(correct_array) == len(behavior_epoch.trials) == len(valid_trial_array), \
+        'Trial number and array lengths are not equal. Something is wrong here.'
+
+    if not ('correct_response' and 'valid_trial') in behavior_epoch.trials.dtype.names:
+        behavior_epoch.trials = recfunctions.append_fields(behavior_epoch.trials,
+                                                           ['correct_response', 'valid_trial'],
+                                                           [correct_array, valid_trial_array],
+                                                           usemask=False)
+    else:
+        behavior_epoch.trials['correct_response'] = correct_array
+        behavior_epoch.trials['valid_trial'] = valid_trial_array
+
     return percent_correct
 
 
@@ -43,7 +56,6 @@ def calc_mask_performance(behavior_epoch, separate_concentrations=True):
     odor_conc = behavior_epoch.trials['odorconc']
     mask_concs = np.unique(odor_conc[mask_trials])
 
-
     behavior_epoch.mask_concs = mask_concs
 
     mask_performance = {}
@@ -65,73 +77,17 @@ def calc_mask_performance(behavior_epoch, separate_concentrations=True):
                 print sum(conc_mask)
         for lat in mask_latencies_unique:
             lat_mask = mask_latencies == lat
-            t_mask = mask_trials * conc_mask * lat_mask * behavior_epoch.valid_trial_array
-            percent_correct = np.sum(behavior_epoch.correct_trial_array * t_mask)
+            t_mask = mask_trials * conc_mask * lat_mask * behavior_epoch.trials['valid_trial']
+            percent_correct = np.sum(behavior_epoch.trials['correct_response'] * t_mask)
             n_trials = np.sum(t_mask)
             c_dict[lat] = (percent_correct, n_trials)
         mask_performance[conc] = c_dict
         # Calculate unmasked trial performance:
-        ut_mask = np.invert(mask_trials) * conc_mask * behavior_epoch.valid_trial_array
-        umask_performance[conc] = (np.sum(ut_mask * behavior_epoch.correct_trial_array),
+        ut_mask = np.invert(mask_trials) * conc_mask * behavior_epoch.trials['valid_trial']
+        umask_performance[conc] = (np.sum(ut_mask * behavior_epoch.trials['correct_response']),
                                    np.sum(ut_mask))
     behavior_epoch.mask_performace = mask_performance
     behavior_epoch.unmask_performance = umask_performance
     return
 
 
-def calc_correct_first_lick(behavior_epoch):
-    """
-
-    :param behavior_epoch:
-    :return:
-    :type behavior_epoch: behavior_data_classes.BehaviorEpoch
-    """
-    correct_on_first_lick_list = []
-    first_lick_list = []
-    first_correct_lick_list = []
-
-    for tr_idx in range(len(behavior_epoch.trials)):
-        trial = behavior_epoch.return_trial(tr_idx)
-        if not trial:
-            correct_on_first_lick_list.append(False)
-            first_lick_list.append(0)
-            continue
-        result = trial.trials['result']
-        lick1 = behavior_epoch.events['lick1']
-        lick2 = behavior_epoch.events['lick2']
-
-        if result == 1 or result == 4:
-            #  correct is lick2, incorrect is lick 1
-            if np.any(lick2):
-                first_correct_lick = lick2[0, 0]
-            else:
-                first_correct_lick = np.inf
-            if np.any(lick1):
-                first_incorrect_lick = lick1[0, 0]
-            else:
-                first_incorrect_lick = np.inf
-        elif result == 2 or result == 3:
-
-            if np.any(lick1):
-                first_correct_lick = lick1[0, 0]
-            else:
-                first_correct_lick = np.inf
-            if np.any(lick2):
-                first_incorrect_lick = lick2[0, 0]
-            else:
-                first_incorrect_lick = np.inf
-        else:
-            # result was a 5 or a 0, this is an invalid trial, but we need a placeholder
-            correct_on_first_lick_list.append(False)
-            first_lick_list.append(0)
-            continue
-
-        if first_correct_lick < first_incorrect_lick:
-            correct_on_first_lick_list.append(True)
-            first_lick_list.append(first_correct_lick)
-        else:
-            correct_on_first_lick_list.append(False)
-            first_lick_list.append(first_incorrect_lick)
-
-    behavior_epoch.correct_on_first_lick = np.array(correct_on_first_lick_list)
-    behavior_epoch.first_lick_time = np.array(first_lick_list)

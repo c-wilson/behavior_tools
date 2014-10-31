@@ -16,7 +16,7 @@ def clopper_pearson(n_correct, n, conf_interval=0.95):
     alpha = 1. - conf_interval
     lo = stats.beta.ppf(alpha / 2.,
                         n_correct,
-                        n - n_correct +1)
+                        n - n_correct + 1)
     hi = stats.beta.isf(alpha / 2.,
                         n_correct + 1,
                         n - n_correct)
@@ -33,6 +33,6 @@ def jeffreys_interval(n_correct, n, conf_interval=0.95):
     :return:
     """
     alpha = 1. - conf_interval
-    lo, hi = stats.beta.interval(1 - alpha,  n_correct + 0.5,
-                                             n - n_correct + 0.5)
+    lo, hi = stats.beta.interval(1 - alpha, n_correct + 0.5,
+                                 n - n_correct + 0.5)
     return lo, hi
