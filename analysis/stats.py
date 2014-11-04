@@ -4,7 +4,7 @@ import numpy as np
 from scipy import stats
 
 
-def clopper_pearson(n_correct, n, conf_interval=0.95):
+def clopper_pearson(n_correct, n, conf_interval=0.95, *args, **kwargs):
     """
     Clopper-Pearson exact method of binomial confidence interval calculation.
 
@@ -23,7 +23,7 @@ def clopper_pearson(n_correct, n, conf_interval=0.95):
     return lo, hi
 
 
-def jeffreys_interval(n_correct, n, conf_interval=0.95):
+def jeffreys_interval(n_correct, n, conf_interval=0.95, *args, **kwargs):
     """
     Jeffreys method of binomial confidence interval calculation.
 
