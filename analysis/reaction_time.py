@@ -232,9 +232,13 @@ def rxn_concentration_make_observers(behavior_epochs, skip_first=20):
         c_rxn = np.array([], dtype=np.float64)
         for epoch in behavior_epochs:
             trials = epoch.trials[skip_first:]
-            if not hasattr(epoch, 'reaction_times'):
-                rxn_time_epoch(epoch)
-            rxn = epoch.reaction_times[skip_first:]
+            # if not hasattr(epoch, 'reaction_times'):
+            #     rxn_time_epoch(epoch)
+            try:
+                rxn = trials['reaction_time']
+            except ValueError:
+                rxn_time_epoch(behavior_epochs)
+                rxn = trials['reaction_time']
             result = trials['result']
             concentrations = trials['odorconc']
             valid = (result < 5) * (result > 0) * (concentrations == con)

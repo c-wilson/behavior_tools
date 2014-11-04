@@ -13,12 +13,24 @@ def calc_performance(behavior_epoch):
     :return:
     :type behavior_epoch: behavior_data_classes.BehaviorEpoch
     """
+
+    if 'valid_trial' in behavior_epoch.trials.dtype.names:
+        old_valid_trials = behavior_epoch.trials['valid_trial']
+        # other routines can only INVALIDATE trials, but cannot guarantee that they will be
+        # considered valid by this routine. Any trials considered invalid here will be marked as
+        # invalid regardless of the previous status. Other routines should adhere to this guideline.
+    else:
+        old_valid_trials = np.empty(behavior_epoch.trials['result'].shape)
+        old_valid_trials.fill(True)
+
     results = behavior_epoch.trials['result']
     a = results > 0
     b = results < 3
     correct_array = a * b
+    correct_array = correct_array.astype(bool)
     c = results < 5
-    valid_trial_array = a * c
+    valid_trial_array = a * c * old_valid_trials
+    valid_trial_array = valid_trial_array.astype(bool)
     percent_correct = np.float(np.sum(correct_array)) / np.float(np.sum(valid_trial_array))
     behavior_epoch.percent_correct = percent_correct
 

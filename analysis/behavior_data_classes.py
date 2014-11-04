@@ -3,6 +3,8 @@ __author__ = 'chris'
 import tables
 import utils
 import numpy as np
+from numpy.lib import recfunctions
+import numpy as np
 
 # TODO: make a translator to read fields from the trials array using attributes (ie epoch.trialtype = epoch.trials['trialtype']
 
@@ -108,6 +110,26 @@ class BehaviorRun(object):
         end += padding[1]
         return self.return_time_period(start, end)
 
+    def add_field(self, field_names, field_values):
+        """
+
+        :param field_names:
+        :param field_values:
+        :return:
+        """
+
+        if type(field_names) == str:
+            if len(field_values) != len(self.trials):
+                raise ValueError('New field length must equal the number of trials in epoch.')
+        else:
+            for field, field_name in zip(field_values, field_names):
+                if len(field) != len(self.trials):
+                    raise ValueError('New field: %s does not have a length equal to the number of trials in epoch'
+                                     % field_name)
+        # if no errors: add to trials structured array.
+        self.trials = recfunctions.append_fields(self.trials, field_names, field_values, usemask=False)
+
+
     def close(self):
         """
         Closes _h5 object linked to the behavior run.
@@ -158,10 +180,14 @@ class BehaviorEpoch(object):
         """
 
         """
-        self.mouse = parent.mouse
-        self.session = parent.session
-        self.date_time = parent.date_time
-        self._h5 = parent._h5
+        if type(parent) is list:
+            # TODO: process iterables containing parents to make a list of their attributes.
+            return
+        else:
+            self.mouse = parent.mouse
+            self.session = parent.session
+            self.date_time = parent.date_time
+            self._h5 = parent._h5
 
 
 class BehaviorTrial(BehaviorEpoch):
@@ -178,3 +204,37 @@ class BehaviorTrial(BehaviorEpoch):
         super(BehaviorTrial, self).__init__(*args, **kwargs)
         # just want to check that this is in fact representing a single trial, and not many.
         assert len(self.trials) == 1, 'Warning: cannot initialize a BehaviorTrial object with more than one trial.'
+
+
+def combine_epochs(epochs):
+    """
+    Combines behavior epochs to create a new epoch that contains trial information for all epochs.
+
+    :param epochs:
+    :return:
+    """
+
+    # TODO: combine streams and events with offset to allow for retrieval of complete trial data from the epoch.k
+
+    # first go through the epochs to get the field names that are common between all of the epochs.
+    field_names = None
+    for epoch in epochs:
+        trials_t = epoch.trials
+        field_names_t = trials_t.dtype.names
+        if field_names is None:
+            field_names = list(field_names_t)
+        else:
+            for val in field_names:
+                if val not in field_names_t:
+                    field_names.remove(val)
+
+    ts = None
+    for epoch in epochs:
+        trials_t = epoch.trials
+        if ts is None:
+            ts = trials_t[field_names]
+        else:
+            ts = np.concatenate((ts, trials_t[field_names]))
+
+    #TODO: make this with lists of start and end times that represent offsets.
+    return BehaviorEpoch(0, 0, trials=ts, events={}, streams={}, parent=epochs)
