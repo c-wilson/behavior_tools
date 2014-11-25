@@ -77,8 +77,12 @@ class BehaviorRun(object):
                 #TODO: implement function where we can read values that we want later instead of loading into memory now.
                 pass
         # assume that all 'Trials' events occur between the 'starttrial' and 'endtrial' times.
-        starts = self.trials['starttrial']
-        ends = self.trials['endtrial']
+        try:
+            starts = self.trials['starttrial']
+            ends = self.trials['endtrial']
+        except ValueError:
+            starts = self.trials['trialstart']
+            ends = self.trials['trialend']
         idx = (starts <= end_time) * (starts >= start_time) * (ends <= end_time) * (
         ends >= start_time)  # a bit redundant.
         trials = self.trials[idx]  # produces a tables.Table
@@ -98,9 +102,13 @@ class BehaviorRun(object):
         :return:
         """
         trial = self.trials[trial_index]
-        start = trial['starttrial']
-        end = trial[
-            'endtrial']  # don't really care here whether this is higher than the record: np will return only as much as it has.
+        try:
+            start = trial['starttrial']
+            end = trial['endtrial']  # don't really care here whether this is higher than the record: np will return
+            # only as much as it has.
+        except IndexError:
+            start = trial['trialstart']
+            end = trial['trialend']
         if not start or not end:
             return None
         if np.isscalar(padding):
