@@ -1,3 +1,4 @@
+from __future__ import division
 __author__ = 'chris'
 
 
@@ -5,11 +6,12 @@ import numpy as np
 from scipy.optimize import minimize
 from scipy.stats import binom
 from psycho_fns import p_funcs
-from multiprocessing import Pool
+# from multiprocessing import Pool
 from functools import partial
+import numba
 
 def fit_p_func(data, stim, p_func, bounds=(None, None, None, None),
-               search_grid_size=50, initial_conditions=None):
+               search_grid_size=50, initial_conditions=None, debug=False):
     """
 
     :param data: 2xn array of [number correct, number trials]. Each row of the array are trials for a single stimulus
@@ -53,12 +55,15 @@ def fit_p_func(data, stim, p_func, bounds=(None, None, None, None),
                 return fn
             reparam_fn = func_g1(bound)
             reparam_fns.append(reparam_fn)
-            guess_space.append(np.array([0]))
+            guess_space.append(np.array([0.]))
         elif len(bound) == 2:
             def func_g(high,low):
                 # generate a function OBJECT with the high and low set as constants:
+
+                @numba.autojit('f8(f8)', nopython=True)
                 def tmpfunc(x):
                     return low + (high-low)/(1+np.exp(-x))
+
                 def inv_tmpfunc(x):
                     return -np.log((high-low)/(x-low)-1)
                 return tmpfunc, inv_tmpfunc
@@ -67,11 +72,9 @@ def fit_p_func(data, stim, p_func, bounds=(None, None, None, None),
             reparam_fn, inv_reparam_fn = func_g(h,l)
             reparam_fns.append(reparam_fn)
             guess_space.append(np.nan_to_num(inv_reparam_fn(np.linspace(h,l, num=search_grid_size))))
-            # print guess_space
         else:
-            print 'alpha value is not scalar or of length 2, so this cannot be preformed.'
-            #TODO: raise exemption
-            return
+            raise ValueError('alpha value is not scalar or of length 2, so this cannot be preformed.')
+
 
 
 
@@ -83,10 +86,19 @@ def fit_p_func(data, stim, p_func, bounds=(None, None, None, None),
         beta  = model_params[1]
         guess = model_params[2]
         lapse = model_params[3]
-        def ob_fun((a, b, g, l)):  # expects a tuple "x" from the minimizer
-            return -np.sum(n * np.nan_to_num(np.log(binom.pmf(n, m, p_func(stim_i, alpha(a), beta(b), guess(g), lapse(l))))) +
-                           (m-n) * np.nan_to_num(np.log(1-binom.pmf(n, m, p_func(stim_i, alpha(a),
-                                                                                 beta(b), guess(g), lapse(l))))))
+
+        @numba.autojit
+        def ob_fun(input_tup):  # expects a tuple "x" from the minimizer
+            a, b, g, l = (input_tup)
+            #these function call should be Xtremely fast with numba calling other numba functions.
+            a2 = alpha(a)
+            b2 = beta(b)
+            g2 =guess(g)
+            l2 = lapse(l)
+            res = p_func(stim_i, a2, b2, g2, l2)
+
+            return -np.sum(n * np.nan_to_num(np.log(binom.pmf(n, m, res))) +
+                           (m-n) * np.nan_to_num(np.log(1.-binom.pmf(n, m, res))))
         return ob_fun
     # then create an instance of the objective function and minimize.
     nll = ob_gen(stim, reparam_fns)
@@ -105,7 +117,7 @@ def fit_p_func(data, stim, p_func, bounds=(None, None, None, None),
             for j, b in enumerate(guess_space[1]):
                 for k, g in enumerate(guess_space[2]):
                     for ii, l in enumerate(guess_space[3]):
-                        nll_mat[i,j,k,ii] = nll((a,b,g,l))
+                        nll_mat[i,j,k,ii] = nll((a, b, g, l))
 
         guess_idxes = np.where(nll_mat == np.min(nll_mat))
 
@@ -120,7 +132,8 @@ def fit_p_func(data, stim, p_func, bounds=(None, None, None, None),
             x0.append(g_ax[idx][0])
     else:
         x0 = initial_conditions
-    # print x0
+    if debug:
+        print x0
 
     # ----- MINIMIZE OBJECTIVE FUNCTION -----
     res = minimize(nll, x0, method='Nelder-Mead', options={'maxiter':int(1e9), 'maxfev':int(1e4)})
@@ -192,6 +205,31 @@ def bootstrap_analysis(observer, n_samples=20000):
     return observer
 
 
+def _plot_bootstrap(observer, evaluation_range, parameter):
+    # TODO: IMPLEMENT THIS.
+
+    """
+
+    :param observer:
+    :param evaluate:
+    :param parameter:
+    :return:
+    """
+
+    try:
+        results = observer.model.evaluate(evaluation_range)
+    except AttributeError:
+        raise AttributeError('The observer has no psychometric model. Please run fit_p_func to fit a model.')
+
+
+    try:
+        value = observer.bootstrap
+    except:
+        pass
+
+
+
+
 def _draw_and_fit(_iter, observer):
     """
 
@@ -241,10 +279,10 @@ class PsychometricModel(object):
             i = np.array([i])
         elif isinstance(i, list):
             i = np.array(i)
-        ret = np.zeros(i.shape)
+        # ret = np.zeros(i.shape)
         p_func = self.p_func
-        for idx, stim in enumerate(i):
-            ret[idx] = p_func(stim, self.alpha, self.beta, self.guess, self.lapse)
+        # for idx, stim in enumerate(i):
+        ret = p_func(i, self.alpha, self.beta, self.guess, self.lapse)
         return ret
 
     def __str__(self):
