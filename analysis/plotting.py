@@ -6,7 +6,7 @@ import numpy as np
 import stats
 
 
-def plot_binomial(x, k, n, ci_fn='clopper_pearson', conf_interval=0.95, *args, **kwargs):
+def plot_binomial(x, k, n, ci_fn='clopper_pearson', conf_interval=0.95, axis=plt, *args, **kwargs):
     """
     Plot binomial performance with confidence intervals from the number successes.
 
@@ -38,6 +38,4 @@ def plot_binomial(x, k, n, ci_fn='clopper_pearson', conf_interval=0.95, *args, *
     ranges = np.array(ranges)
     er_l = np.abs(ranges[0, :]-pc)
     er_h = np.abs(ranges[1, :]-pc)
-    plt.errorbar(x, pc, [er_l, er_h], *args, **kwargs)
-
-
+    return axis.errorbar(x, pc, [er_l, er_h], *args, **kwargs)

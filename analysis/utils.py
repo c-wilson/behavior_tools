@@ -3,8 +3,13 @@ __author__ = 'chris'
 import datetime, os
 import numpy as np
 
+if os.uname()[1] == "flipper":
+    BASE_DIRECTORY = '/experiment/raw_data/behavior'
+elif os.uname()[1].startswith('cw-macbook'):
+    BASE_DIRECTORY = '/Users/chris/Data/Behavior'
 
-def get_session_fns(mouse, sessions=(), base_directory='/Users/chris/Data/Behavior/'):
+
+def get_session_fns(mouse, sessions=(), base_directory=BASE_DIRECTORY):
     """
     Returns a list of filenames corresponding to the session files for a mouse.
 
@@ -41,7 +46,7 @@ def get_session_fns(mouse, sessions=(), base_directory='/Users/chris/Data/Behavi
     return fns
 
 
-def _get_session_fn(mouse, session, base_directory='~/Data/Behavior/'):
+def _get_session_fn(mouse, session, base_directory=BASE_DIRECTORY):
     """
     Helper function to get filename based on mouse number and session number.
 
@@ -52,7 +57,7 @@ def _get_session_fn(mouse, session, base_directory='~/Data/Behavior/'):
     """
     mousedirname = 'mouse_%04i' % mouse
     mousepath = os.path.join(base_directory, mousedirname)
-    session_name_seed = 'mouse%i_sess%i' % (mouse, session)
+    session_name_seed = 'mouse%i_sess%i_' % (mouse, session)
     d = os.listdir(mousepath)
     file_list = []
     for fn in d:
@@ -66,6 +71,7 @@ def _get_session_fn(mouse, session, base_directory='~/Data/Behavior/'):
         ind = file_sizes.index(max(file_sizes))
         session_path = os.path.join(mousepath, file_list[ind])
     elif len(file_list) < 1:
+        print('Warning, no session found for mouse %i, session %i' % (mouse, session))
         return None
     else:
         session_path = os.path.join(mousepath, file_list[0])

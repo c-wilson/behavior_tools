@@ -57,11 +57,13 @@ def calc_mask_performance(behavior_epoch, separate_concentrations=True):
     :param behavior_epoch:
     :return:
     """
+
     calc_performance(behavior_epoch)
     if 'amplitude_1' in behavior_epoch.trials.dtype.names:
         mask_trials = behavior_epoch.trials['amplitude_1'] > 0
     else:
         behavior_epoch.mask_performace = {}
+        print 'no amplitude_1'
         return
     mask_latencies = behavior_epoch.trials['pulseOnsetDelay_1']
     mask_latencies_unique = np.unique(mask_latencies)

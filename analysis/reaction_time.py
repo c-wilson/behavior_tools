@@ -344,8 +344,8 @@ def calc_correct_first_lick(behavior_epoch, **kwargs):
     first_lick_time_list = []
 
     if not 'first_stim_sniff' in behavior_epoch.trials.dtype.names:
-        if not behavior_epoch.events.has_key('sniff_inh'):
-            sniff_processing.make_sniff_events(behavior_epoch, **kwargs)
+        # if not behavior_epoch.events.has_key('sniff_inh'):
+        sniff_processing.make_sniff_events(behavior_epoch, **kwargs)
         rxn_time_epoch(behavior_epoch, **kwargs)
 
     for tr_idx in range(len(behavior_epoch.trials)):
