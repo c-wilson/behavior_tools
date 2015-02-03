@@ -29,12 +29,13 @@ class Observer(object):
         """
 
         data = self.samples
-        stim = self.stim_i
+        stim = np.array(self.stim_i, dtype=np.float)
         self.model = fit_p_func(data, stim, p_func, bounds=bounds,
                          search_grid_size=search_grid_size, **kwargs)
         return self  # allows use with multiprocessing schemes.
 
-    def plot_bins(self, binsize=50, *args, **kwargs):
+    def plot_bins(self, binsize=50, axis=plt, *args, **kwargs):
+
         nt = np.sum(self.samples[:,1])
         nbins = int(nt) / int(binsize)
         results = np.zeros((nbins, 2))
@@ -51,7 +52,7 @@ class Observer(object):
                 n_c = 0
                 i += 1
         results = results[:i, :]
-        plt.plot(results[:, 0], results[:, 1], *args, **kwargs)
+        axis.plot(results[:, 0], results[:, 1], *args, **kwargs)
 
 
 
