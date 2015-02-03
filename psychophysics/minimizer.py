@@ -6,7 +6,6 @@ import numpy as np
 from scipy.optimize import minimize
 from scipy.stats import binom
 from psycho_fns import p_funcs
-from multiprocessing import Pool
 from functools import partial
 
 def fit_p_func(data, stim, p_func, bounds=(None, None, None, None),
@@ -54,14 +53,14 @@ def fit_p_func(data, stim, p_func, bounds=(None, None, None, None),
                 return fn
             reparam_fn = func_g1(bound)
             reparam_fns.append(reparam_fn)
-            guess_space.append(np.array([0]))
+            guess_space.append(np.array([0.]))
         elif len(bound) == 2:
             def func_g(high,low):
                 # generate a function OBJECT with the high and low set as constants:
                 def tmpfunc(x):
-                    return low + (high-low)/(1+np.exp(-x))
+                    return low + (high-low)/(1.+np.exp(-x))
                 def inv_tmpfunc(x):
-                    return -np.log((high-low)/(x-low)-1)
+                    return -np.log((high-low)/(x-low)-1.)
                 return tmpfunc, inv_tmpfunc
             h = max(bound)
             l = min(bound)
@@ -85,9 +84,9 @@ def fit_p_func(data, stim, p_func, bounds=(None, None, None, None),
         guess = model_params[2]
         lapse = model_params[3]
         def ob_fun((a, b, g, l)):  # expects a tuple "x" from the minimizer
-            return -np.sum(n * np.nan_to_num(np.log(binom.pmf(n, m, p_func(stim_i, alpha(a), beta(b), guess(g), lapse(l))))) +
-                           (m-n) * np.nan_to_num(np.log(1-binom.pmf(n, m, p_func(stim_i, alpha(a),
-                                                                                 beta(b), guess(g), lapse(l))))))
+            res=p_func(stim_i, alpha(a), beta(b), guess(g), lapse(l))
+            return -np.sum(n * np.nan_to_num(np.log(binom.pmf(n, m, res))) +
+                           (m-n) * np.nan_to_num(np.log(1.-binom.pmf(n, m, res))))
         return ob_fun
     # then create an instance of the objective function and minimize.
     nll = ob_gen(stim, reparam_fns)
@@ -106,7 +105,7 @@ def fit_p_func(data, stim, p_func, bounds=(None, None, None, None),
             for j, b in enumerate(guess_space[1]):
                 for k, g in enumerate(guess_space[2]):
                     for ii, l in enumerate(guess_space[3]):
-                        nll_mat[i,j,k,ii] = nll((a,b,g,l))
+                        nll_mat[i,j,k,ii] = nll((a, b, g, l))
 
         guess_idxes = np.where(nll_mat == np.min(nll_mat))
 
@@ -265,12 +264,10 @@ class PsychometricModel(object):
 
         if np.isscalar(i):
             i = np.array([i])
-        elif isinstance(i, list):
+        elif isinstance(i, list) or isinstance(i, tuple):
             i = np.array(i)
-        ret = np.zeros(i.shape)
         p_func = self.p_func
-        for idx, stim in enumerate(i):
-            ret[idx] = p_func(stim, self.alpha, self.beta, self.guess, self.lapse)
+        ret = p_func(i, self.alpha, self.beta, self.guess, self.lapse)
         return ret
 
     def __str__(self):
