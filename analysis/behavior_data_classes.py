@@ -61,7 +61,7 @@ class BehaviorRun(object):
                     ev_i = np.where(ev_l)  # returns 2 d array. 1st row is row number, 2nd is column number.
                     ev_i_l = np.min(ev_i[0])  # using first column, which corresponds to the row (each row is an event).
                     ev_i_h = np.max(ev_i[0])
-                    events[k] = ev[ev_i_l:ev_i_h]
+                    events[k] = ev[ev_i_l:ev_i_h+1]  #need +1 here because indexing a range!!!
                 else:  # Handles the case where ev_l is an empty array, in which case the min and max functions explode.
                     events[k] = np.array([], dtype=ev.dtype)
             else:
