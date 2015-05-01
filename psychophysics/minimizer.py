@@ -8,127 +8,74 @@ from scipy.stats import binom
 from psycho_fns import p_funcs
 from functools import partial
 
-def fit_p_func(data, stim, p_func, bounds=(None, None, None, None),
-               search_grid_size=50, initial_conditions=None):
+def fit_p_func(data, stim, p_func, bounds=((0, None), (0, None), (0., 1.), (0., 1.)),
+               x0=None, *args, **kwargs):
     """
 
     :param data: 2xn array of [number correct, number trials]. Each row of the array are trials for a single stimulus
     parameter.
     :param stim: 1xn array of stimulus parameter (ie stimulus intensity) corresponding to the data array.
-    :param p_func: psychometric function object or string indicating the .
+    :param p_func: psychometric function object or string indicating the function to use (ie 'logistic' or 'Weibull').
     FUNCTION SHOULD EXPECT 5 VARIABLES (i, alpha, beta, guess, lapse).
-    :param bounds: list or tuple of constraints for parameters order -> [alpha, beta, guess, lapse]. If constraint
-    is scalar, the parameter will be treated as set (not free), elseif the constraint is a 2 member tuple,the function
-    will constrain the parameter within the bounds specified (low, high). If None, the parameter is COMPLETELY un-
-    constrained.
+    :param bounds: list or tuple of constraints for parameters with order ->
+                   [(alpha_low, alpha_high), (beta_low, beta_high), (guess_low, guess_high), (lapse_low, lapse_high)].
+                    if any bound is not needed, use None. For example [(0, None), ... ] will have a minimum bound at 0
+                    and no maximum bound for the alpha parameter.
+    :param x0: List of initial conditions for optimizer ([alpha, beta, gamma, lapse]). Defaults to [100, 6, .5, 1].
     :return: PsycometricModel object.
     """
 
+    default_x0 = (100, 6, .5, .1)
+
     if type(p_func) == str:
         p_func = p_funcs[p_func]
-    n = data[:,0]  # num correct.
-    m = data[:,1]  # num trials total.
-    if initial_conditions:  # then we don't need to search,
-        search_grid_size = 1  # so lets make the grid size small so we don't allocare memory for this.
-
-    # ----- REPARAMETERIZE a, b, g, l -----
-    # based on constraints by constructing functions returning these constraints.
-    # by setting some of these reparameterized functions to a constant, the minimizer will not modify them!
-    # Also, generate guess space which will be used to evaluate the objective function to determine initial conditions.
-
-    reparam_fns = []
-    guess_space = []
-
-    for bound in bounds:
-        if bound is None:
-            reparam_fns.append(lambda x: x)
-            guess_space.append(np.linspace(np.nan_to_num(-np.inf),
-                                            np.nan_to_num(np.inf),
-                                            num=search_grid_size))
-        elif np.isscalar(bound):
-            def func_g1(constant):
-                def fn(x):
-                    #do nothing, return a constant.
-                    return constant
-                return fn
-            reparam_fn = func_g1(bound)
-            reparam_fns.append(reparam_fn)
-            guess_space.append(np.array([0.]))
-        elif len(bound) == 2:
-            def func_g(high,low):
-                # generate a function OBJECT with the high and low set as constants:
-                def tmpfunc(x):
-                    return low + (high-low)/(1.+np.exp(-x))
-                def inv_tmpfunc(x):
-                    return -np.log((high-low)/(x-low)-1.)
-                return tmpfunc, inv_tmpfunc
-            h = max(bound)
-            l = min(bound)
-            reparam_fn, inv_reparam_fn = func_g(h,l)
-            reparam_fns.append(reparam_fn)
-            guess_space.append(np.nan_to_num(inv_reparam_fn(np.linspace(h,l, num=search_grid_size))))
-            # print guess_space
-        else:
-            print 'alpha value is not scalar or of length 2, so this cannot be preformed.'
-            #TODO: raise exemption
-            return
-
-
+    n = data[:, 0]  # num correct.
+    m = data[:, 1]  # num trials total.
 
     # ----- GENERATE OBJECTIVE FUNCTION ------
     # first, generate a negative log likelihood objective function with a function generator:
-    def ob_gen(stim_i, model_params):
-        # model parameters here are put into an objective function as CONSTANTS
-        alpha = model_params[0]
-        beta  = model_params[1]
-        guess = model_params[2]
-        lapse = model_params[3]
-        def ob_fun((a, b, g, l)):  # expects a tuple "x" from the minimizer
-            res=p_func(stim_i, alpha(a), beta(b), guess(g), lapse(l))
-            return -np.sum(n * np.nan_to_num(np.log(binom.pmf(n, m, res))) +
-                           (m-n) * np.nan_to_num(np.log(1.-binom.pmf(n, m, res))))
-        return ob_fun
+
+    def nll((a, b, g, l)):  # expects a tuple "x" from the minimizer
+        res=p_func(stim, a, b, g, l)
+        p = binom.pmf(n, m, res)
+        log_p = np.log(p)
+        return -np.sum(n * log_p + (m-n) * np.log(1.-np.nan_to_num(p)))
     # then create an instance of the objective function and minimize.
-    nll = ob_gen(stim, reparam_fns)
 
-    # ----- GENERATE START CONDITIONS -----
-    # use brute force to find start conditions (x0) that nearly maximize the objective function.
-    #
-    x0 = []
-    if not initial_conditions:
-        nll_mat = np.zeros((guess_space[0].size,
-                            guess_space[1].size,
-                            guess_space[2].size,
-                            guess_space[3].size))
+    # ----- Make initial guess ---------
 
-        for i, a in enumerate(guess_space[0]):
-            for j, b in enumerate(guess_space[1]):
-                for k, g in enumerate(guess_space[2]):
-                    for ii, l in enumerate(guess_space[3]):
-                        nll_mat[i,j,k,ii] = nll((a, b, g, l))
-
-        guess_idxes = np.where(nll_mat == np.min(nll_mat))
-
-        # #### DEBUG ######
-        # import matplotlib.pyplot as plt
-        # import matplotlib
-        # plt.pcolormesh(guess_space[0] ,guess_space[1], np.clip(-np.nan_to_num(nll_mat[:,:,0,0]),0 ,5e4, ),
-        #                norm=matplotlib.colors.LogNorm())
-        # #### DEBUG ######
-
-        for g_ax, idx, rp_fn in zip(guess_space, guess_idxes, reparam_fns):
-            x0.append(g_ax[idx][0])
-    else:
-        x0 = initial_conditions
-    # print x0
+    if x0 is None:
+        x0 = np.zeros(4)
+        for i in xrange(4):
+            bound = bounds[i]
+            if bound is None:
+                x0[i] = default_x0[i]
+            else:
+                l = bound[0]
+                h = bound[1]
+                if l is None:
+                    x0[i] = h
+                elif h is None:
+                    x0[i] = l
+                else:
+                    if x0[i] > l and x0[i] < h:
+                        x0[i] = default_x0[i]
+                    else:
+                        x0[i] = l + (h - l)/2.
 
     # ----- MINIMIZE OBJECTIVE FUNCTION -----
-    res = minimize(nll, x0, method='Nelder-Mead', options={'maxiter':int(1e9), 'maxfev':int(1e4)})
+    res = minimize(nll, x0, bounds=bounds, *args, **kwargs)
+
+    if res.success:
+        alpha, beta, gamma, lamb = res.x
+    else:
+        alpha = beta = gamma = lamb = None
+
     return PsychometricModel(p_func,
-                             alpha=reparam_fns[0](res.x[0]),
-                             beta=reparam_fns[1](res.x[1]),
-                             guess=reparam_fns[2](res.x[2]),
-                             lapse=reparam_fns[3](res.x[3]),
+                             alpha=alpha,
+                             beta=beta,
+                             guess=gamma,
+                             lapse=lamb,
                              x0=x0,
                              bounds=bounds,
                              minimize_result=res)
@@ -262,16 +209,23 @@ class PsychometricModel(object):
         :return: np.array of predicted performance values
         """
 
+        for param in [self.alpha, self.beta, self.guess, self.lapse]:
+            if param is None:
+                print 'Parameter is set to None, model did not converge!'
+                a = np.empty(len(i))
+                a[:] = np.nan
+                return a
+
         if np.isscalar(i):
             i = np.array([i])
-        elif isinstance(i, list) or isinstance(i, tuple):
-            i = np.array(i)
+        else:
+            i = np.asarray(i)
         p_func = self.p_func
         ret = p_func(i, self.alpha, self.beta, self.guess, self.lapse)
         return ret
 
     def __str__(self):
         return ("Psycometric model fit to %s function. \nParameters: alpha: %.4f, beta: %.4f, gamma: %.4f, lambda: %.4f"
-                % (self.p_func, self.alpha, self.beta, self.guess, self.lapse))
+                % (self.p_func.func_name, self.alpha, self.beta, self.guess, self.lapse))
 
 
