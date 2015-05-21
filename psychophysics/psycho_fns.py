@@ -17,10 +17,10 @@ def weibull(i, alpha, beta, guess, lapse):
             np.exp(-(i/alpha)**beta))
 
 def logistic(i, alpha, beta, guess, lapse):
-    return (guess+(1.-lapse-guess)/
+    return (guess+(1.-lapse-guess) /
             (1.+np.exp(-beta*(i-alpha))))
 
 
 
-p_funcs = {'Weibull' : weibull,
-           'logistic' : logistic,}
+p_funcs = {'Weibull': weibull,
+           'logistic': logistic,}

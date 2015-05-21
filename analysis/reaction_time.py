@@ -1,10 +1,11 @@
+from __future__ import division
 __author__ = 'chris'
-
 import numpy as np
 import matplotlib.pyplot as plt
 from .. import psychophysics
 import sniff_processing
 from numpy.lib import recfunctions
+import logging
 
 
 def rxn_time_trial(behavior_trial):
@@ -18,6 +19,7 @@ def rxn_time_trial(behavior_trial):
     sniff = behavior_trial.streams['sniff']
     # check that sniff is good:  check max > 200, min < -200, no breaks:
     if np.max(sniff) < 200 or np.min(sniff) > -200 or np.sum(sniff == 0) > 399:
+        logging.debug('sniff does not meet criteria')
         return np.NaN, np.NaN
     # FIND first inhalation following stimulus onset:
     stim_on = behavior_trial.trials['fvOnTime']
@@ -27,6 +29,7 @@ def rxn_time_trial(behavior_trial):
     if sniff_starts.any():
         first_sniff = sniff_starts[0]  # returns only the first sniff time stamp.
     else:
+        logging.debug('no sniffs found')
         return np.NaN, np.NaN
 
     # FIND first lick after first sniff:
@@ -36,12 +39,20 @@ def rxn_time_trial(behavior_trial):
     if 'lick2' in behavior_trial.events.keys():
         licks.append(behavior_trial.events['lick2'])
 
+    inh_onset = behavior_trial.trials['inh_onset']
+
     for lick in licks:
-        l = lick > first_sniff
-        if l.any():
-            first_licks.append(lick[l][0])
+        if lick.size:
+            lickstarts = lick[:, 0]
+            l = lickstarts > inh_onset
+            if l.any():
+                first_licks.append(lickstarts[l][0])
+            else:
+                first_licks.append(np.NaN)
         else:
             first_licks.append(np.NaN)
+    # print first_licks
+    # print first_sniff
 
     return np.nanmin(first_licks) - first_sniff, first_sniff
 
@@ -185,7 +196,7 @@ def rxn_first_lick_make_observer(behavior_epochs, skip_first=20, **kwargs):
             rxn_time_epoch(epoch)
         rxn = trials['first_lick_time']
         result = trials['first_lick_correct']
-        valid = trials['valid_trial']
+        valid = trials['valid_trial'].astype(bool)
         rxn = rxn[valid]
         correct = result[valid]
         c_rxn = np.concatenate([c_rxn, rxn])
@@ -348,8 +359,8 @@ def calc_correct_first_lick(behavior_epoch, **kwargs):
         sniff_processing.make_sniff_events(behavior_epoch, **kwargs)
         rxn_time_epoch(behavior_epoch, **kwargs)
 
-    for tr_idx in range(len(behavior_epoch.trials)):
-        trial = behavior_epoch.return_trial(tr_idx)
+    for tr_idx in xrange(len(behavior_epoch.trials)):
+        trial = behavior_epoch.return_trial(tr_idx, padding=(0, 1000))
         if not trial:
             correct_on_first_lick_list.append(False)
             first_lick_time_list.append(np.inf)
@@ -358,27 +369,35 @@ def calc_correct_first_lick(behavior_epoch, **kwargs):
         trial_type = trial.trials['trialtype']
         lick1 = trial.events['lick1']
         lick2 = trial.events['lick2']
-        first_sniff_time = trial.trials['first_stim_sniff']
+        first_sniff_time = trial.trials['inh_onset']
+
+        if lick1.size:
+            lick1 = lick1[:, 0]
+            lick1 = lick1[lick1 > first_sniff_time]
+        if lick2.size:
+            lick2 = lick2[:, 0]
+            lick2 = lick2[lick2 > first_sniff_time]
+
 
         if trial_type == 1:
             # correct is lick2, incorrect is lick 1
             if np.any(lick2):
-                first_correct_lick_time = lick2[0, 0]
+                first_correct_lick_time = lick2[0]
             else:
                 first_correct_lick_time = np.inf
 
             if np.any(lick1):
-                first_incorrect_lick_time = lick1[0, 0]
+                first_incorrect_lick_time = lick1[0]
             else:
                 first_incorrect_lick_time = np.inf
 
         elif trial_type == 0:
             if np.any(lick1):
-                first_correct_lick_time = lick1[0, 0]
+                first_correct_lick_time = lick1[0]
             else:
                 first_correct_lick_time = np.inf
             if np.any(lick2):
-                first_incorrect_lick_time = lick2[0, 0]
+                first_incorrect_lick_time = lick2[0]
             else:
                 first_incorrect_lick_time = np.inf
 
@@ -406,3 +425,5 @@ def calc_correct_first_lick(behavior_epoch, **kwargs):
     else:
         behavior_epoch.trials['first_lick_correct'] = correct_on_first_lick_list
         behavior_epoch.trials['first_lick_time'] = first_lick_time_list
+
+    return behavior_epoch

@@ -1,3 +1,4 @@
+from __future__ import division
 __author__ = 'chris'
 
 
@@ -33,6 +34,10 @@ def plot_binomial(x, k, n, ci_fn='clopper_pearson', conf_interval=0.95, axis=plt
     x = np.array(x)
     k = np.array(k).astype(float)
     n = np.array(n).astype(float)
+    srt = np.argsort(x)
+    x = x[srt]
+    k = k[srt]
+    n = n[srt]
     pc = k / n
     ranges = (ci_calc(k, n, conf_interval, *args, **kwargs))
     ranges = np.array(ranges)

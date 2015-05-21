@@ -1,3 +1,4 @@
+from __future__ import division
 __author__ = 'chris'
 
 import behavior_data_classes
@@ -27,10 +28,8 @@ def calc_performance(behavior_epoch):
     a = results > 0
     b = results < 3
     correct_array = a * b
-    correct_array = correct_array.astype(bool)
     c = results < 5
     valid_trial_array = a * c * old_valid_trials
-    valid_trial_array = valid_trial_array.astype(bool)
     percent_correct = np.float(np.sum(correct_array)) / np.float(np.sum(valid_trial_array))
     behavior_epoch.percent_correct = percent_correct
 
@@ -49,7 +48,47 @@ def calc_performance(behavior_epoch):
     return percent_correct
 
 
-def calc_mask_performance(behavior_epoch, separate_concentrations=True):
+def calc_performance_by_conc(behavior_epoch, include_mask_trials=False):
+    """
+
+    :param behavior_epoch:
+    :return:
+    """
+    if 'valid_trial' in behavior_epoch.trials.dtype.names:
+        old_valid_trials = behavior_epoch.trials['valid_trial']
+        # other routines can only INVALIDATE trials, but cannot guarantee that they will be
+        # considered valid by this routine. Any trials considered invalid here will be marked as
+        # invalid regardless of the previous status. Other routines should adhere to this guideline.
+    else:
+        old_valid_trials = np.empty(behavior_epoch.trials['result'].shape)
+        old_valid_trials.fill(True)
+
+    results = behavior_epoch.trials['result']
+    a = results > 0
+    b = results < 3
+    correct_array = a * b
+    c = results < 5
+    valid_trial_array = a * c * old_valid_trials
+    concentrations = np.unique(behavior_epoch.trials['odorconc'])
+    percent_correct = np.zeros((len(concentrations), 2), dtype=np.int)
+    print 'hello'
+    if not include_mask_trials and 'amplitude_1' in behavior_epoch.trials.dtype.names:
+        mask_trials = behavior_epoch.trials['amplitude_1'] > 0
+    else:
+        mask_trials = np.zeros(len(behavior_epoch.trials), dtype=np.bool)
+    for ic in xrange(len(concentrations)):
+
+        conc = concentrations[ic]
+        print conc
+        cmask = behavior_epoch.trials['odorconc'] == conc
+        tmask = cmask * ~mask_trials
+        percent_correct[ic, 0] = np.sum(correct_array[tmask])
+        percent_correct[ic, 1] = np.sum(valid_trial_array[tmask])
+
+    return percent_correct, concentrations
+
+
+def calc_mask_performance(behavior_epoch, separate_concentrations=True, limit_rxn_time=False):
     """
     Adds a mask_performance attribute to the BehaviorEpoch object input.
     Format of mask_performace dictionary is : {concentration: {mask_latency: (num_correct, num_trials)}}
@@ -69,6 +108,11 @@ def calc_mask_performance(behavior_epoch, separate_concentrations=True):
     mask_latencies_unique = np.unique(mask_latencies)
     odor_conc = behavior_epoch.trials['odorconc']
     mask_concs = np.unique(odor_conc[mask_trials])
+    if limit_rxn_time:
+        rxns = behavior_epoch.trials['reaction_time']
+        rxn_mask = rxns < limit_rxn_time
+    else:
+        rxn_mask = np.ones(len(behavior_epoch.trials), dtype=np.bool)
 
     behavior_epoch.mask_concs = mask_concs
 
@@ -91,7 +135,7 @@ def calc_mask_performance(behavior_epoch, separate_concentrations=True):
                 print sum(conc_mask)
         for lat in mask_latencies_unique:
             lat_mask = mask_latencies == lat
-            t_mask = mask_trials * conc_mask * lat_mask * behavior_epoch.trials['valid_trial']
+            t_mask = mask_trials * conc_mask * lat_mask * behavior_epoch.trials['valid_trial'] * rxn_mask
             percent_correct = np.sum(behavior_epoch.trials['correct_response'] * t_mask)
             n_trials = np.sum(t_mask)
             c_dict[lat] = (percent_correct, n_trials)

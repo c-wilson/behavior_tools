@@ -7,6 +7,7 @@ from scipy.optimize import minimize
 from scipy.stats import binom
 from psycho_fns import p_funcs
 from functools import partial
+from scipy.misc import logsumexp
 
 def fit_p_func(data, stim, p_func, bounds=((0, None), (0, None), (0., 1.), (0., 1.)),
                x0=None, *args, **kwargs):
@@ -25,6 +26,7 @@ def fit_p_func(data, stim, p_func, bounds=((0, None), (0, None), (0., 1.), (0., 
     :return: PsycometricModel object.
     """
 
+    print 'hello'
     default_x0 = (100, 6, .5, .1)
 
     if type(p_func) == str:
@@ -36,10 +38,15 @@ def fit_p_func(data, stim, p_func, bounds=((0, None), (0, None), (0., 1.), (0., 
     # first, generate a negative log likelihood objective function with a function generator:
 
     def nll((a, b, g, l)):  # expects a tuple "x" from the minimizer
-        res=p_func(stim, a, b, g, l)
-        p = binom.pmf(n, m, res)
-        log_p = np.log(p)
-        return -np.sum(n * log_p + (m-n) * np.log(1.-np.nan_to_num(p)))
+        """
+        negative log likelihood function.
+        """
+
+        res = p_func(stim, a, b, g, l)
+        p = np.nan_to_num(binom.pmf(n, m, res))
+        log_p = np.nan_to_num(np.log(p))  # underflow of 'p' causes this to go to -infinity, which I hate.
+
+        return -np.sum(n * log_p + (m-n) * np.log(1.-p))
     # then create an instance of the objective function and minimize.
 
     # ----- Make initial guess ---------
@@ -137,6 +144,7 @@ def bootstrap_analysis(observer, n_samples=20000):
                'CI_95': confidences}
     observer.bootstrap = results
     return observer
+
 
 
 def _plot_bootstrap(observer, evaluation_range, parameter):

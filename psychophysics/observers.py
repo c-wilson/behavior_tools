@@ -1,4 +1,4 @@
-from minimizer import fit_p_func
+from minimizer import fit_p_func, PsychometricModel
 from psycho_fns import p_funcs
 import numpy as np
 import matplotlib.pyplot as plt
@@ -16,9 +16,10 @@ class Observer(object):
         self.samples = stimuli
         self.stim_i = samples
         self.model = None
+        self.bootstrap = {}
 
-    def fit_p_func(self, p_func, bounds=[None, None, None, None],
-               search_grid_size=50, **kwargs):
+
+    def fit_p_func(self, p_func, bounds=[None, None, None, None], **kwargs):
         """
         Makes class method from static method of fit_p_func.
 
@@ -30,13 +31,12 @@ class Observer(object):
 
         data = self.samples
         stim = np.array(self.stim_i, dtype=np.float)
-        self.model = fit_p_func(data, stim, p_func, bounds=bounds,
-                         search_grid_size=search_grid_size, **kwargs)
+        self.model = fit_p_func(data, stim, p_func, bounds=bounds, **kwargs)
         return self  # allows use with multiprocessing schemes.
 
     def plot_bins(self, binsize=50, axis=plt, *args, **kwargs):
 
-        nt = np.sum(self.samples[:,1])
+        nt = np.sum(self.samples[:, 1])
         nbins = int(nt) / int(binsize)
         results = np.zeros((nbins, 2))
         count = 0
