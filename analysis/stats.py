@@ -1,7 +1,6 @@
-__author__ = 'chris'
-
-import numpy as np
+from __future__ import division
 from scipy import stats
+__author__ = 'chris'
 
 
 def clopper_pearson(n_correct, n, conf_interval=0.95, *args, **kwargs):
