@@ -26,7 +26,6 @@ def fit_p_func(data, stim, p_func, bounds=((0, None), (0, None), (0., 1.), (0., 
     :return: PsycometricModel object.
     """
 
-    print 'hello'
     default_x0 = (100, 6, .5, .1)
 
     if type(p_func) == str:
@@ -43,10 +42,10 @@ def fit_p_func(data, stim, p_func, bounds=((0, None), (0, None), (0., 1.), (0., 
         """
 
         res = p_func(stim, a, b, g, l)
-        p = np.nan_to_num(binom.pmf(n, m, res))
-        log_p = np.nan_to_num(np.log(p))  # underflow of 'p' causes this to go to -infinity, which I hate.
+        # p = np.nan_to_num(binom.pmf(n, m, res))
+        # log_p = np.nan_to_num(np.log(p))  # underflow of 'p' causes this to go to -infinity, which I hate.
 
-        return -np.sum(n * log_p + (m-n) * np.log(1.-p))
+        return -np.sum(binom.logpmf(n, m , res))
     # then create an instance of the objective function and minimize.
 
     # ----- Make initial guess ---------
